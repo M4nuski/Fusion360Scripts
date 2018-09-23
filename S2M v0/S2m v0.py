@@ -64,7 +64,7 @@ class SampleCommandExecuteHandler(Core.CommandEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self, args):
-        eventArgs = Core.CommandEventArgs.cast(args)
+        #eventArgs = Core.CommandEventArgs.cast(args)
 
         # Code to react to the event.
         #app = adsk.core.Application.get()
@@ -112,7 +112,7 @@ class SampleCommandExecuteHandler(Core.CommandEventHandler):
             bd2 = od2 - baseOffset
         
             newComp.name = "S2M v0 {}n".format(n)
-            
+            #
             # OD circle and pulley body
             sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, od2)
             extrudes = newComp.features.extrudeFeatures
