@@ -1,5 +1,5 @@
 #Author-M4nusky
-#Description-simplier script to add parametric shaft
+#Description-S2M pulley generator script
 
 import adsk.core as Core
 import adsk.fusion as Fusion
@@ -22,18 +22,17 @@ def run(context):
         rootComp = design.rootComponent;
 
         # Create a new sketch on the xy plane.	
-        sketches = rootComp.sketches;
+        #sketches = rootComp.sketches;
         
         # create a new occurence of a new component at origin
         newComp = rootComp.occurrences.addNewComponent(Core.Matrix3D.create()).component        
-        #newComp.name = "S2M v0"
-        
-       # xyPlane = newComp.xYConstructionPlane
-        sketches = newComp.sketches
-        sketch = sketches.add(newComp.xYConstructionPlane, None)        
+
+        #sketches = newComp.sketches
+        # Create a new sketch on the xy plane.	
+        sketch = newComp.sketches.add(newComp.xYConstructionPlane, None)        
        
+        # Center point
         cp = Core.Point3D.create(0,0,0);
-        #dPI = math.pi*2   
         
         # S2M Standard Parameters
         pitch = 0.2
@@ -54,10 +53,9 @@ def run(context):
         od2 = pd2 - pitchOffset
         bd2 = od2 - baseOffset
 
-        #halfToothAngle = math.pi / n
         newComp.name = "S2M v0 {}n".format(n)
         
-        #OD circle and pulley body
+        # OD circle and pulley body
         sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, od2)
         extrudes = newComp.features.extrudeFeatures
         extInput = extrudes.createInput(sketch.profiles.item(0), Fusion.FeatureOperations.NewBodyFeatureOperation)
@@ -65,37 +63,19 @@ def run(context):
         extInput.setDistanceExtent(False, distance)
         od_cyl = extrudes.add(extInput)  
         
-        #BD and PD circles
+        # BD and PD circles
         sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, bd2)
         p_circ = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, pd2)
         p_circ.isConstruction = True
         
-        #Involutes
+        # "Involutes"
         invOffset = Core.Point3D.create(-invOffsetX, invOffsetY + od2, 0)
         sketch.sketchCurves.sketchCircles.addByCenterRadius(invOffset, invRad)
         invOffset = Core.Point3D.create( invOffsetX, invOffsetY + od2, 0)
         sketch.sketchCurves.sketchCircles.addByCenterRadius(invOffset, invRad)
-        
-        
-        # Sketch Tooth Lines    
-        #line1 = sketch.sketchCurves.sketchLines.addByTwoPoints(cp, Core.Point3D.create(0, od2, 0))
-        #line2 = sketch.sketchCurves.sketchLines.addByTwoPoints(cp, Core.Point3D.create(0, od2, 0))
-
-        #rot = Core.Matrix3D.create()
-        #rot.setToRotation(halfToothAngle, Core.Vector3D.create(0,0,1), cp)
-    
-        #entities = Core.ObjectCollection.create()
-        
-        #entities.add(line1)
-        #sketch.move(entities, rot)        
-        ##entities.clear()
-        
-        #entities.add(line2)   
-        #rot.setToRotation(-halfToothAngle, Core.Vector3D.create(0,0,1), cp)
-        #sketch.move(entities, rot)        
-        #entities.clear()
-
-        # Get the profile of the inv circles cut
+      
+      
+        # Get the profile of the involute circles cut
         prof = None;
         for pro in sketch.profiles:
             p_c_y = pro.areaProperties().centroid.y
@@ -103,19 +83,18 @@ def run(context):
             if (p_c_y > bd2) and (p_c_y < od2) and (math.fabs(p_c_x) < 0.0001):
                 prof = pro
               
+              
         # Create an extrusion input
         extInput = extrudes.createInput(prof, Fusion.FeatureOperations.NewBodyFeatureOperation)
-        
-        # Define that the extent is a distance extent of 5 cm.
         distance = Core.ValueInput.createByReal(t)
         extInput.setDistanceExtent(False, distance)
 
         # Create the extrusion.
         toothCutter = extrudes.add(extInput)
 
-        # Add base fillets to cutter        
-        fillets = newComp.features.filletFeatures        
 
+        # Add base fillets to cutter        
+        fillets = newComp.features.filletFeatures
         collection = Core.ObjectCollection.create()
  
         # Get the straight edges closest to center
@@ -125,14 +104,14 @@ def run(context):
                     if (edge.pointOnEdge.y < (od2 + bd2)/2) :
                         collection.add(edge)
             
-        input1 = fillets.createInput()  
-        input1.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(filletRad), True)
-        input1.isG2 = False
-        input1.isRollingBallCorner = False        
-        fillets.add(input1)
+        filletInput = fillets.createInput()  
+        filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(filletRad), True)
+        filletInput.isG2 = False
+        filletInput.isRollingBallCorner = False        
+        fillets.add(filletInput)
+
 
         # Circular pattern for each teeth
-
         collection.clear()
         collection.add(toothCutter.bodies.item(0))
 
@@ -146,8 +125,10 @@ def run(context):
         # Create the circular pattern
         teeth = circularFeats.add(circularFeatInput)
            
+           
         # Cut the base cylinder with the teeth
-        collection.clear()
+        collection.clear()        
+        collection.add(toothCutter.bodies.item(0))
         
         for th in teeth.bodies:
             collection.add(th)
@@ -156,10 +137,25 @@ def run(context):
         combInput = comb.createInput(od_cyl.bodies.item(0), collection)
         combInput.operation = Fusion.FeatureOperations.CutFeatureOperation
         
-        res = comb.add(combInput)
+        # Combine
+        pulley = comb.add(combInput)
         
-        toothCutter.dissolve()
         
+        # Add edge fillets to pulley
+        collection.clear()
+ 
+        # Get the straight edges fartest from center
+        for face in pulley.faces:
+            for edge in face.edges:
+                if (edge.geometry.curveType == Core.Curve3DTypes.Line3DCurveType):
+                    if (len2D(edge.pointOnEdge) > ( (od2 + bd2)/2 ) ) :
+                        collection.add(edge)
+         
+
+        filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(edgeRad), True)
+        fillets.add(filletInput)        
+        
+                
     except internalScriptError as ise:        
         if ui:
             ui.messageBox(ise, "Internal Script Error")
@@ -170,3 +166,10 @@ def run(context):
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc())) 
         else:
             print('Failed:\n{}'.format(traceback.format_exc()))
+
+def len2D(pt):
+    return math.sqrt( (pt.x*pt.x) + (pt.y*pt.y) )
+    
+    
+    
+    
