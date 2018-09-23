@@ -8,8 +8,8 @@ import math
 
 from . import transaction
 
-class internalScriptError(BaseException):
-    pass
+#class internalScriptError(BaseException):
+#    pass
 
 def run(context):
     print("in main.run")
@@ -31,7 +31,7 @@ def script():
         design = Fusion.Design.cast(app.activeProduct)       
     
         if not design:
-            raise internalScriptError('No active Fusion design')
+            raise BaseException('No active Fusion design')
     
         design.designType = Fusion.DesignTypes.ParametricDesignType
        
@@ -56,8 +56,17 @@ def script():
         baseOffset = 0.076
         
         # Pulley properties
-        n = 20   
-        t = 0.6
+        (userInput, cancelled) = inputInt("20", design, ui)
+        if cancelled:
+            return
+        n = int(userInput)
+        #n = 20
+        
+        (userInput, cancelled) = inputLength("6 mm", design, ui)
+        if cancelled:
+            return
+        t = userInput
+        #t = 0.6
         
         pd2 = (n * pitch / math.pi) / 2
         od2 = pd2 - pitchOffset
@@ -166,7 +175,7 @@ def script():
         fillets.add(filletInput)        
         
                 
-    except internalScriptError as ise:        
+    except BaseException as ise:        
         if ui:
             ui.messageBox(ise, "Internal Script Error")
         else:
@@ -176,4 +185,60 @@ def script():
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc())) 
         else:
             print('Failed:\n{}'.format(traceback.format_exc()))
-            
+           
+def inputLength(default, design, ui):
+    # Prompt the user for a string and validate it's valid.
+    isValid = False
+    isCancelled = False
+    
+    while (not isValid) and (not isCancelled):
+        # Get a string from the user.
+        (input, isCancelled) = ui.inputBox('Pulley Thickness', 'Distance', default)
+      
+        # Exit the program if the dialog was cancelled.
+        if isCancelled:
+            return (default, isCancelled)
+        
+        # Check that a valid length description was entered.
+        unitsMgr = design.unitsManager
+        try:
+            realValue = unitsMgr.evaluateExpression(input, unitsMgr.defaultLengthUnits)
+            isValid = True
+            input = realValue
+        except:
+            # Invalid expression so display an error and set the flag to allow them
+            # to enter a value again.
+            ui.messageBox('"' + input + '" is not a valid length expression.', 'Invalid entry', 
+                          Core.MessageBoxButtonTypes.OKButtonType, 
+                          Core.MessageBoxIconTypes.CriticalIconType)
+            isValid = False
+    
+    return (input, isCancelled)
+    
+    
+def inputInt(default, design, ui):
+    # Prompt the user for a string and validate it's valid.
+    isValid = False
+    isCancelled = False
+    
+    while (not isValid) and (not isCancelled):
+        # Get a string from the user.
+        (input, isCancelled) = ui.inputBox('Number of teeth', 'Integer', default)
+      
+        # Exit the program if the dialog was cancelled.
+        if isCancelled:
+            return (default, isCancelled)
+        
+        # Check that a valid length description was entered.
+
+        if str.isdigit(input):
+            isValid = True
+        else:
+            # Invalid expression so display an error and set the flag to allow them
+            # to enter a value again.
+            ui.messageBox('"' + input + '" is not a valid integer expression.', 'Invalid entry', 
+                          Core.MessageBoxButtonTypes.OKButtonType, 
+                          Core.MessageBoxIconTypes.CriticalIconType)
+            isValid = False
+    
+    return (input, isCancelled)
