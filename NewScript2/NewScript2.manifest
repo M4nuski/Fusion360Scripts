@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"Script Test 2 in python (?)"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

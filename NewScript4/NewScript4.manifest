@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"input test"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

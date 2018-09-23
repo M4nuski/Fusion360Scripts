@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"S2M type pulley generator script"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

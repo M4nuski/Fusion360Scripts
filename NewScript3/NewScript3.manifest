@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"simplier script to add parametric shaft"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

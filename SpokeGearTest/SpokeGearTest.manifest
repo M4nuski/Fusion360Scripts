@@ -1,0 +1,13 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"addin",
+	"id":	"2836de44-001d-47cd-b66c-318fe8580018",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"Test to fugure out access to sketch profiles before creating extrusion"
+	},
+	"version":	"1",
+	"runOnStartup":	false,
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

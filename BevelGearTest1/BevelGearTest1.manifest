@@ -1,0 +1,13 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"addin",
+	"id":	"050beb10-1ac4-4065-9b4b-040c58db67d8",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"Test to make proper bevel gear generator"
+	},
+	"version":	"beta1",
+	"runOnStartup":	false,
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}

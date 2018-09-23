@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"Test of ui dialog to generate parametric cylinder"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
