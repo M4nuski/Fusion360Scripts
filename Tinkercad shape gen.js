@@ -1,5 +1,5 @@
 
-intersect / combine
+//intersect / combine
 
 // Convenience Declarations For Dependencies.
 // 'Core' Is Configured In Libraries Section.
@@ -202,7 +202,7 @@ function endTest() {
 
 
 
-s2m 2018-09-23
+// s2m 2018-09-23
 
 // Convenience Declarations For Dependencies.
 // 'Core' Is Configured In Libraries Section.
