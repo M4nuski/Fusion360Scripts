@@ -59,7 +59,7 @@ def script(): # Basic script, create one tooth, then use it to cut cylindrical b
         design.designType = Fusion.DesignTypes.ParametricDesignType
        
         # Center point
-        cp = Core.Point3D.create(0,0,0);
+        cp = Core.Point3D.create(0,0,0)
         
         # S2M Standard Parameters
         pitch = 0.2
@@ -123,7 +123,7 @@ def script(): # Basic script, create one tooth, then use it to cut cylindrical b
       
       
         # Get the profile of the involute circles cut
-        prof = None;
+        prof = None
         for pro in sketch.profiles:
             p_c_y = pro.areaProperties().centroid.y
             p_c_x = pro.areaProperties().centroid.x
@@ -185,7 +185,7 @@ def script(): # Basic script, create one tooth, then use it to cut cylindrical b
         
         # Combine
         pulley = comb.add(combInput)
-
+        pulley.bodies.item(0).name = "S2M " + str(n)
         
         # Add edge fillets to pulley
         collection.clear()
@@ -202,7 +202,7 @@ def script(): # Basic script, create one tooth, then use it to cut cylindrical b
         fillets.add(filletInput)
         
         endTime = time.time()
-        ui.messageBox(str(endTime - startTime), "Elapsed Time");
+        ui.messageBox(str(endTime - startTime), "Elapsed Time")
         
                 
     except BaseException as ise:        
@@ -303,7 +303,7 @@ def script2(): # Test 2 with all teeth drawn on sketch then extrude all
         design.designType = Fusion.DesignTypes.ParametricDesignType
        
         # Center point
-        cp = Core.Point3D.create(0,0,0);
+        cp = Core.Point3D.create(0,0,0)
         
         # S2M Standard Parameters
         pitch = 0.2
@@ -393,7 +393,7 @@ def script2(): # Test 2 with all teeth drawn on sketch then extrude all
     
         # Create the extrusion.
         pulley = extrudes.add(extInput)
-        
+        pulley.bodies.item(0).name = "S2M " + str(n)
 
         collection.clear()
         
@@ -428,7 +428,7 @@ def script2(): # Test 2 with all teeth drawn on sketch then extrude all
         fillets.add(filletInput)     
         
         endTime = time.time()
-        ui.messageBox(str(endTime - startTime), "Elapsed Time");
+        ui.messageBox(str(endTime - startTime), "Elapsed Time")
         
                 
     except BaseException as ise:        
@@ -457,7 +457,7 @@ def script3(): # Test 3, create single teeth pie slice and circular pattern
         design.designType = Fusion.DesignTypes.ParametricDesignType
        
         # Center point
-        cp = Core.Point3D.create(0,0,0);
+        cp = Core.Point3D.create(0,0,0)
         
         # S2M Standard Parameters
         pitch = 0.2
@@ -616,12 +616,13 @@ def script3(): # Test 3, create single teeth pie slice and circular pattern
         combInput.operation = Fusion.FeatureOperations.JoinFeatureOperation
         
         # Combine
-        comb.add(combInput)
+        pulley = comb.add(combInput)
+        pulley.bodies.item(0).name = "S2M " + str(n)
         
         endTime = time.time()
-        ui.messageBox(str(endTime - startTime), "Elapsed Time");
+        ui.messageBox(str(endTime - startTime), "Elapsed Time")
         
-                
+
     except BaseException as ise:        
         if ui:
             ui.messageBox(ise, "Internal Script Error")

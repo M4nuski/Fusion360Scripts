@@ -11,7 +11,7 @@ import traceback
 handlers = []
 
 _script_to_run = None
-_script_name = "";
+_script_name = ""
 
 def setup(target_script, script_name):
     
