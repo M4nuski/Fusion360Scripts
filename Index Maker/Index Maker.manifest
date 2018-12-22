@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"create a series of circle following a specific formula for diameter and stride"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
