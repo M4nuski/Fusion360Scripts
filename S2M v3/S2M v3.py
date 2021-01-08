@@ -1,27 +1,27 @@
 #Author-M4nusky
-#Description-S2M pulley generator
+#Description-Updated version of S2M step pulley generator
 
 import adsk.core as Core
 import adsk.fusion as Fusion
 import adsk as Adsk
 import traceback
 import math
-
-from . import transaction
 import time
 
-
-# Entry points
-
 def run(context):
-    print("in main.run")
-    transaction.setup(script4, "S2Mv2")
-    
+    print("run")
+    try:
+        script4()
+    except:
+        if ui:
+            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
 def stop(context):  
     print("in main.stop")
-    transaction.cleanup(context)
-    
-    
+
+
+
+
 # Some helpers
     
 def len2D(pt):
@@ -42,7 +42,14 @@ def dist2DSq(pt1, pt2):
 
 def vertical(pt1, pt2):
     return (pt1.geometry.z != pt2.geometry.z) and (pt1.geometry.x == pt2.geometry.x) and (pt1.geometry.y == pt2.geometry.y)
-         
+
+def inputBoolean(text, ui):
+    # Get a string from the user.
+    input = ui.messageBox(text, 'S2M Options', Core.MessageBoxButtonTypes.YesNoCancelButtonType, Core.MessageBoxIconTypes.QuestionIconType)
+    if input == Core.DialogResults.DialogYes: return (True, False)
+    if input == Core.DialogResults.DialogNo: return (False, False)
+    return (False, True)
+
 def inputLength(default, text, design, ui):
     # Prompt the user for a string and validate it's valid.
     isValid = False
@@ -114,8 +121,8 @@ def rotateZ(pt):
     y = (pt.x * _s) + (pt.y * _c)    
     pt.x = x
     pt.y = y    
-    
-    
+
+
 # Main scripts
             
 def script4():
@@ -130,87 +137,142 @@ def script4():
             raise BaseException('No active Fusion design')
     
         design.designType = Fusion.DesignTypes.ParametricDesignType
-       
+
+    # Base Data
         # Center point
         cp = Core.Point3D.create(0,0,0)
         
         # S2M Standard Parameters
         pitch = 0.2
-        edgeRad = 0.019
-        filletRad = 0.01
+        edgeRad = 0.019 # outside teeth fillet
+        filletRad = 0.01 # inside root fillet
         invRad = 0.1325
         invOffsetX = 0.130 / 2
         invOffsetY = 0.0172
         
-        pitchOffset = 0.0254
-        baseOffset = 0.076
+        pitchOffset = 0.0254 # pitch radius to outside radius
+        baseOffset = 0.076 # outside radius to base radius
         
-        # Pulley properties
+    # Get Pulley properties from user
         (userInput, cancelled) = inputInt("20", 'Number of teeth', design, ui)
         if cancelled:
             return
         n = int(userInput)
-        
-        (userInput, cancelled) = inputLength("2 mm", 'Sides Thickness', design, ui)
-        if cancelled:
-            return
-        st = userInput
-        
-        (userInput, cancelled) = inputLength("1.5 mm", 'Sides Radius Margin', design, ui)
-        if cancelled:
-            return
-        sr = userInput
-        
+
         (userInput, cancelled) = inputLength("6.5 mm", 'Pulley Thickness', design, ui)
         if cancelled:
             return
         t = userInput
 
+        (userInput, cancelled) = inputBoolean("Add Sides?", ui)
+        if cancelled:
+            return
+        addSides = userInput
 
+        if addSides:        
+            (userInput, cancelled) = inputLength("2 mm", 'Sides Thickness', design, ui)
+            if cancelled:
+                return
+            st = userInput
+            
+            (userInput, cancelled) = inputLength("1.5 mm", 'Sides Margin From Outer Radius', design, ui)
+            if cancelled:
+                return
+            sr = userInput
+        else:
+            st = 0.0
+            sr = 0.0
         
+        (userInput, cancelled) = inputBoolean("Dimensional Offsets?", ui)
+        if cancelled:
+            return
+        addOffsets = userInput
+
+        if addOffsets:
+            (userInput, cancelled) = inputLength("0.0 mm", '"Involute" Shape Radius Offset', design, ui)
+            if cancelled:
+                return
+            sro = userInput
+
+            (userInput, cancelled) = inputLength("0.0 mm", 'Root Radius Offset', design, ui)
+            if cancelled:
+                return
+            rro = userInput
+
+            (userInput, cancelled) = inputLength("0.0 mm", 'Teeth Radius Offset', design, ui)
+            if cancelled:
+                return
+            tro = userInput
+        else:
+            sro = 0.0
+            rro = 0.0
+            tro = 0.0
+
+
+        print("invRad offset ", sro)
+        print("root offset ", rro)
+        print("teeth offset ", tro)
+
         startTime = time.time()
+    
+    # Calculate parameters
         
-        pd2 = (n * pitch / math.pi) / 2
-        od2 = pd2 - pitchOffset
-        bd2 = od2 - baseOffset
+        pitchRadius = (n * pitch / math.pi) / 2
+        print ("pitch dia ", pitchRadius * 2)
+        outsideRadius  = pitchRadius - pitchOffset
+        offsetOutsideRadius = pitchRadius - pitchOffset + tro
+        rootRadius = outsideRadius - baseOffset + rro
+        invRad = invRad + sro
         
-        midPt = (od2 + bd2)/2
+        print("outside dia ", outsideRadius * 2)
+        print("root dia ", rootRadius * 2)
+        print("invRad ", invRad)
+        
+        midPt = (outsideRadius + rootRadius)/2
         #midPtSq = midPt * midPt
         
         toothAngle = 2 * math.pi / n
         halfAngle = math.pi / n
-        
-        # create a new occurence of a new component at origin
-        newComp = design.rootComponent.occurrences.addNewComponent(Core.Matrix3D.create()).component        
-    
-        # Create a new sketch on the xy plane.	
-        sketch = newComp.sketches.add(newComp.xYConstructionPlane, None)   
-        sketch2 = newComp.sketches.add(newComp.xYConstructionPlane, None)  
-    
-        newComp.name = "S2M v2, n={}".format(n)
-        
-        
+
+    # Create Sketch
         
         # Setup arcs        
-        left_pt = Core.Point3D.create(-invOffsetX, invOffsetY + od2, 0)
-        left_arc = Core.Point3D.create(-invOffsetX + invRad, invOffsetY + od2, 0)
+        left_pt = Core.Point3D.create(-invOffsetX, invOffsetY + outsideRadius, 0)
+        left_arc = Core.Point3D.create(-invOffsetX + invRad, invOffsetY + outsideRadius, 0)
+   
+        right_pt = Core.Point3D.create( invOffsetX, invOffsetY + outsideRadius, 0)
+        right_arc = Core.Point3D.create( invOffsetX - invRad, invOffsetY + outsideRadius, 0)
         
-        right_pt = Core.Point3D.create( invOffsetX, invOffsetY + od2, 0)
-        right_arc = Core.Point3D.create( invOffsetX - invRad, invOffsetY + od2, 0)
-        
-        od_arc = Core.Point3D.create(0, od2, 0)
-        bd_arc = Core.Point3D.create(0, bd2, 0)     
+        od_arc = Core.Point3D.create(0, offsetOutsideRadius, 0)
+        bd_arc = Core.Point3D.create(0, rootRadius, 0)
         
         setRotate(halfAngle)           
         rotateZ(od_arc)
         rotateZ(bd_arc)
-        
+
         rotateZ(left_pt)
         rotateZ(left_arc)  
         
         setRotate(-halfAngle)   
         rotateZ(right_pt)
-        rotateZ(right_arc)   
+        rotateZ(right_arc)
+
+        # Validate teeth offset limit
+        if offsetOutsideRadius > dist2D(left_arc, cp):
+            raise BaseException("Teeth offset too big: teeth radius is greater than outside circle")
+
+        # Validate root offset limit
+        if dist2D(left_pt, bd_arc) > invRad - filletRad:
+            raise BaseException("Root offset too small: would create root diameter smaller than base circle")
+            
+        # create a new occurence of a new component at origin
+        newComp = design.rootComponent.occurrences.addNewComponent(Core.Matrix3D.create()).component        
+    
+        # Create a new sketch on the xy plane.
+        sketch = newComp.sketches.add(newComp.xYConstructionPlane)   
+        sketch.name = "InvoluteShapeSketch"
+
+        newComp.name = "S2M v3, n={}".format(n)        
             
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(left_pt,  left_arc, -1.5)
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(right_pt, right_arc, 1.5)
@@ -222,11 +284,40 @@ def script4():
         sketch.sketchCurves.sketchLines.addByTwoPoints(cp, bd_arc2)
 
     
+    # Add Construction Data to Sketch using standard spec
         # PD circle
-        p_circ = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, pd2)
+        p_circ = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, pitchRadius)
         p_circ.isConstruction = True
-        
 
+        # BD circle
+        tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, rootRadius - rro)
+        tempCC.isConstruction = True
+
+        # OD circle
+        tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, outsideRadius)
+        tempCC.isConstruction = True 
+
+        # Involute circle
+        tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(left_pt, invRad - sro)
+        tempCC.isConstruction = True 
+
+        # Involute circle
+        tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(right_pt, invRad - sro)
+        tempCC.isConstruction = True 
+
+    # Add parameters to Sketch
+        sketchTexts = sketch.sketchTexts
+        textPoint = Core.Point3D.create(pitchRadius, pitchRadius, 0.0)
+        dataString = "n={}\nthickness={:.4f}".format(n, t)
+        if addSides:
+            dataString += "\nsides thickness={:.4f}\nsides margin={:.4f}".format(st, sr)
+        if addOffsets:
+            dataString += "\nshape radius offset={:.6f}\nroot radius offset={:.6f}\nteeth radius offset={:.6f}".format(sro, rro, tro)
+        sketchTextInput = sketchTexts.createInput(dataString, 0.2, textPoint)   
+        sketchTexts.add(sketchTextInput)
+
+
+    # Create Solid
         # Get all the profiles
         collection = Core.ObjectCollection.create()    
         for prof in sketch.profiles:
@@ -253,15 +344,19 @@ def script4():
                     if vertical(edge.endVertex, edge.startVertex) and \
                     dist2DSq(bd_arc, edge.endVertex.geometry) > 0.00001 and \
                     dist2DSq(bd_arc2, edge.endVertex.geometry) > 0.00001 and \
-                    (math.fabs(len2D(edge.endVertex.geometry) - bd2) < 0.01):  
+                    (math.fabs(len2D(edge.endVertex.geometry) - rootRadius) < 0.01):  
                         collection.add(edge)
                     
         filletInput = fillets.createInput()  
         filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(filletRad), False)
         filletInput.isG2 = False
-        filletInput.isRollingBallCorner = False        
-        fillets.add(filletInput)
-    
+        filletInput.isRollingBallCorner = False
+        try:
+            fillets.add(filletInput)
+        except:
+            ui.messageBox('Failed to create root fillets:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
+                          Core.MessageBoxButtonTypes.OKButtonType,
+                          Core.MessageBoxIconTypes.CriticalIconType) 
     
         # Add edge fillets  
         collection.clear()
@@ -274,9 +369,15 @@ def script4():
                         collection.add(edge)
             
         filletInput = fillets.createInput()  
-        filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(edgeRad), False) 
-        fillets.add(filletInput)
-    
+        filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(edgeRad), False)
+
+        try:
+            fillets.add(filletInput)
+        except:
+            ui.messageBox('Failed to create teeth fillets:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
+                          Core.MessageBoxButtonTypes.OKButtonType,
+                          Core.MessageBoxIconTypes.CriticalIconType) 
+
         # Circular pattern for each teeth
         collection.clear()
         collection.add(pulleyTooth.bodies.item(0))
@@ -293,8 +394,11 @@ def script4():
         
 
         # Add sides
-        if (st != 0.0) and (sr > 0):
-            sketch2.sketchCurves.sketchCircles.addByCenterRadius(cp, od2 + sr)
+        if addSides and (st != 0.0) and (sr > 0):
+            sketch2 = newComp.sketches.add(newComp.xYConstructionPlane)
+            sketch2.name = "SidesSketch"
+
+            sketch2.sketchCurves.sketchCircles.addByCenterRadius(cp, outsideRadius + sr)
             collection.clear()
             collection.add(sketch2.profiles.item(0))
             extInput = extrudes.createInput(collection, Fusion.FeatureOperations.NewBodyFeatureOperation)
@@ -334,20 +438,18 @@ def script4():
         pulley.bodies.item(0).name = "S2M " + str(n)
         
         endTime = time.time()
-        ui.messageBox(str(endTime - startTime), "Elapsed Time")
+        print("Elapsed time: " + str(endTime - startTime))
         
 
     except BaseException as ise:      
         print("Internal Script Error {}".format(ise))
-    #    if ui:
-     #       ui.messageBox(ise, "Internal Script Error",
-      #                    Core.MessageBoxButtonTypes.OKButtonType, 
-       #                   Core.MessageBoxIconTypes.CriticalIconType)
+        #if ui:
+        ui.messageBox(ise.args[0], "Internal Script Error",
+                          Core.MessageBoxButtonTypes.OKButtonType, 
+                          Core.MessageBoxIconTypes.CriticalIconType)
     except:
-      #  if ui:
-       #     ui.messageBox('Failed:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)") 
-      #  else:
-            print('Failed:\n{}'.format(traceback.format_exc()))
-
-
-
+        print('Failed:\n{}'.format(traceback.format_exc()))
+        #if ui:
+        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
+                          Core.MessageBoxButtonTypes.OKButtonType,
+                          Core.MessageBoxIconTypes.CriticalIconType) 

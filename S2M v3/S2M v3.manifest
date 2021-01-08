@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"M4nusky",
+	"description":	{
+		"":	"Updated version of S2M step pulley generator"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
