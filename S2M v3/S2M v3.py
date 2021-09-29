@@ -258,12 +258,12 @@ def script4():
         rotateZ(right_arc)
 
         # Validate teeth offset limit
-        if offsetOutsideRadius > dist2D(left_arc, cp):
+        if (offsetOutsideRadius - 0.1) > dist2D(left_arc, cp):
             raise BaseException("Teeth offset too big: teeth radius is greater than outside circle")
 
         # Validate root offset limit
-        if dist2D(left_pt, bd_arc) > invRad - filletRad:
-            raise BaseException("Root offset too small: would create root diameter smaller than base circle")
+        #if dist2D(left_pt, bd_arc) > invRad - filletRad:
+        #    raise BaseException("Root offset too small: would create root diameter smaller than base circle")
             
         # create a new occurence of a new component at origin
         newComp = design.rootComponent.occurrences.addNewComponent(Core.Matrix3D.create()).component        
@@ -276,6 +276,13 @@ def script4():
             
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(left_pt,  left_arc, -1.5)
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(right_pt, right_arc, 1.5)
+
+        if offsetOutsideRadius > ((pitchRadius + outsideRadius)/2):
+            sketch.sketchCurves.sketchLines.addByTwoPoints( Core.Point3D.create(left_pt.x + invRad, left_pt.y, left_pt.z), \
+                                                        Core.Point3D.create(left_arc.x, left_arc.y + 0.1, left_arc.z))
+            sketch.sketchCurves.sketchLines.addByTwoPoints( Core.Point3D.create(right_pt.x - invRad, right_pt.y, right_pt.z), \
+                                                        Core.Point3D.create(right_arc.x, right_arc.y + 0.1, right_arc.z))
+
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(cp, od_arc, -toothAngle)
         sketch.sketchCurves.sketchArcs.addByCenterStartSweep(cp, bd_arc, -toothAngle)
         
@@ -286,8 +293,8 @@ def script4():
     
     # Add Construction Data to Sketch using standard spec
         # PD circle
-        p_circ = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, pitchRadius)
-        p_circ.isConstruction = True
+        tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, pitchRadius)
+        tempCC.isConstruction = True
 
         # BD circle
         tempCC = sketch.sketchCurves.sketchCircles.addByCenterRadius(cp, rootRadius - rro)
@@ -312,7 +319,7 @@ def script4():
         if addSides:
             dataString += "\nsides thickness={:.4f}\nsides margin={:.4f}".format(st, sr)
         if addOffsets:
-            dataString += "\nshape radius offset={:.6f}\nroot radius offset={:.6f}\nteeth radius offset={:.6f}".format(sro, rro, tro)
+            dataString += "\nshape radius offset={:+.6f}\nroot radius offset={:+.6f}\nteeth radius offset={:+.6f}".format(sro, rro, tro)
         sketchTextInput = sketchTexts.createInput(dataString, 0.2, textPoint)   
         sketchTexts.add(sketchTextInput)
 
@@ -354,19 +361,18 @@ def script4():
         try:
             fillets.add(filletInput)
         except:
-            ui.messageBox('Failed to create root fillets:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
-                          Core.MessageBoxButtonTypes.OKButtonType,
-                          Core.MessageBoxIconTypes.CriticalIconType) 
+            ui.messageBox('Failed to create root fillets', "Script Exception (S2M)",Core.MessageBoxButtonTypes.OKButtonType, Core.MessageBoxIconTypes.CriticalIconType) 
     
         # Add edge fillets  
         collection.clear()
      
         # Get the straight edges fartest from midpoint
         for face in pulleyTooth.sideFaces:
-            for edge in face.edges:
-                if (edge.geometry.curveType == Core.Curve3DTypes.Line3DCurveType):
-                    if (edge.pointOnEdge.y > midPt) :
-                        collection.add(edge)
+            if dist2DSq(face.centroid,  Core.Point3D.create(0, offsetOutsideRadius, 0)) < 0.0001:
+                for edge in face.edges:
+                    if (edge.geometry.curveType == Core.Curve3DTypes.Line3DCurveType):
+                        if (edge.pointOnEdge.y > midPt):
+                            collection.add(edge)
             
         filletInput = fillets.createInput()  
         filletInput.addConstantRadiusEdgeSet(collection, Core.ValueInput.createByReal(edgeRad), False)
@@ -374,9 +380,7 @@ def script4():
         try:
             fillets.add(filletInput)
         except:
-            ui.messageBox('Failed to create teeth fillets:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
-                          Core.MessageBoxButtonTypes.OKButtonType,
-                          Core.MessageBoxIconTypes.CriticalIconType) 
+            ui.messageBox('Failed to create teeth fillets', "Script Exception (S2M)", Core.MessageBoxButtonTypes.OKButtonType, Core.MessageBoxIconTypes.CriticalIconType) 
 
         # Circular pattern for each teeth
         collection.clear()
@@ -390,8 +394,7 @@ def script4():
         circularFeatInput.isSymmetric = False
         
         # Create the circular pattern
-        allTeeth = circularFeats.add(circularFeatInput)
-        
+        allTeeth = circularFeats.add(circularFeatInput)        
 
         # Add sides
         if addSides and (st != 0.0) and (sr > 0):
@@ -444,12 +447,8 @@ def script4():
     except BaseException as ise:      
         print("Internal Script Error {}".format(ise))
         #if ui:
-        ui.messageBox(ise.args[0], "Internal Script Error",
-                          Core.MessageBoxButtonTypes.OKButtonType, 
-                          Core.MessageBoxIconTypes.CriticalIconType)
+        ui.messageBox(ise.args[0], "Internal Script Error", Core.MessageBoxButtonTypes.OKButtonType, Core.MessageBoxIconTypes.CriticalIconType)
     except:
         print('Failed:\n{}'.format(traceback.format_exc()))
         #if ui:
-        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)",
-                          Core.MessageBoxButtonTypes.OKButtonType,
-                          Core.MessageBoxIconTypes.CriticalIconType) 
+        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()), "Script Exception (S2M)", Core.MessageBoxButtonTypes.OKButtonType, Core.MessageBoxIconTypes.CriticalIconType) 
